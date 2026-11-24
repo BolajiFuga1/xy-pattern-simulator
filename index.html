@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XY Pattern Simulator</title>
+<style>
+  :root{
+    --bg:#f6f6f2; --card:#ffffff; --ink:#1c1f24; --mut:#69707a; --line:#e2e2db;
+    --x:#1d4ed8; --xbg:#e6edfe; --y:#b45309; --ybg:#fdf0e1;
+    --ok:#15803d; --okbg:#e7f6ec; --bad:#b91c1c; --badbg:#fdecec; --hi:#fde68a; --accent:#111827;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{padding:28px 20px 8px;max-width:1100px;margin:0 auto}
+  h1{margin:0 0 4px;font-size:26px;letter-spacing:-.02em}
+  .sub{color:var(--mut);margin:0}
+  main{max-width:1100px;margin:0 auto;padding:12px 20px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+  .card h2{font-size:17px;margin:0 0 12px}
+  .card h3{font-size:14px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .controls label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:4px}
+  .controls input[type=number],.controls input[type=text]{width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:#fff}
+  .controls .chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--ink);padding-bottom:8px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button:hover{opacity:.9}
+  .banner{border-radius:12px;padding:14px 16px;font-weight:600;margin-bottom:4px}
+  .banner.ok{background:var(--okbg);color:var(--ok)}
+  .banner.bad{background:var(--badbg);color:var(--bad)}
+  .banner.neutral{background:#eef0f3;color:var(--ink)}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:120px}
+  .stat b{display:block;font-size:20px}
+  .stat span{font-size:12px;color:var(--mut)}
+  .tablewrap{overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{background:#fafaf7;position:sticky;top:0;font-weight:600;color:var(--mut);font-size:12px}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:#f7f7f2}
+  tbody tr.sel{background:#fff7d6}
+  .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+  .pill.ok{background:var(--okbg);color:var(--ok)}
+  .pill.bad{background:var(--badbg);color:var(--bad)}
+  .pill.mut{background:#eef0f3;color:var(--mut)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  /* draw plot */
+  .plot{display:grid;grid-template-columns:52px repeat(26,minmax(10px,1fr));gap:1px;font-size:10px;min-width:420px}
+  .plotwrap{overflow:auto;max-height:340px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fcfcfa}
+  .plot .h{color:var(--mut);text-align:center;position:sticky;top:0;background:#fcfcfa}
+  .plot .rl{color:var(--mut);text-align:right;padding-right:6px}
+  .plot .cell{height:12px;background:#f0f0ea;border-radius:2px}
+  .plot .cell.on{background:var(--x)}
+  .plot .rep .cell{background:#fbe7a6}
+  .plot .rep .cell.on{background:var(--bad)}
+  .plot .row{display:contents}
+  .lines{margin:10px 0 0;padding:10px 12px;background:#fafaf7;border:1px solid var(--line);border-radius:10px;font-size:13px;overflow-x:auto}
+  /* chart */
+  .chart{display:grid;grid-template-columns:repeat(8,1fr);gap:10px 8px;max-width:640px;margin:6px auto 0}
+  .slot{display:flex;justify-content:center}
+  .span2{grid-column:span 2}.span4{grid-column:span 4}.span8{grid-column:span 8}
+  .fig{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:10px;border:1px solid var(--line);background:#fff;min-width:46px}
+  .fig.match{border-color:#eab308;background:#fffbea;box-shadow:0 0 0 2px var(--hi)}
+  .fig.key{border-color:var(--accent)}
+  .fl{font-size:11px;font-weight:700}
+  .fz{font-size:10px;color:var(--mut)}
+  .c{width:24px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:5px;font:700 12px ui-monospace,Menlo,monospace}
+  .c.X{background:var(--xbg);color:var(--x)}
+  .c.Y{background:var(--ybg);color:var(--y)}
+  .tier{grid-column:span 8;font-size:11px;color:var(--mut);text-align:center;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+  .derived{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:16px}
+  .derived .d{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .derived .f{font-size:11px;color:var(--mut)}
+  .nil{display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;min-width:60px;border:1px dashed var(--bad);border-radius:10px;color:var(--bad);font-weight:700}
+  .result{margin-top:10px}
+  .zref{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
+  details summary{cursor:pointer;font-weight:600}
+  .note{font-size:13px;color:var(--mut)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+  .diff{color:var(--bad);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <h1>XY Pattern Simulator</h1>
+  <p class="sub">Random draws 1–26 → Z-pattern selection → C1–C20 chart → C17 match test. Repeats up to the run limit or until 8+ of C1–C16 equal C17.</p>
+</header>
+<main>
+
+  <section class="card">
+    <h2>Settings</h2>
+    <div class="controls">
+      <label>Max runs<input id="maxRuns" type="number" value="100" min="1" max="100000"></label>
+      <label>Max draws per run<input id="maxDraws" type="number" value="10000" min="2" max="1000000"></label>
+      <label>Seed (optional)<input id="seed" type="text" placeholder="random"></label>
+      <label class="chk"><input id="stopNil" type="checkbox" checked> C20 = Nil ends that run</label>
+      <button id="runBtn">Run simulation</button>
+      <button id="exBtn" class="ghost">Check against example</button>
+    </div>
+    <p class="note" style="margin:10px 0 0">A seed reproduces the same results. Leave blank for fresh random results each time.</p>
+  </section>
+
+  <section class="card" id="summaryCard" hidden>
+    <h2>Result</h2>
+    <div id="banner" class="banner neutral"></div>
+    <div class="stats" id="stats"></div>
+    <h3>All runs (tap a row to view it)</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Run</th><th>Draws</th><th>Repeated</th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>Reselects</th><th>C15</th><th>C17</th><th>C20</th><th>= C17</th><th>Outcome</th></tr></thead>
+      <tbody id="runRows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="detailCard" hidden>
+    <h2 id="detailTitle">Run detail</h2>
+    <div id="detail"></div>
+  </section>
+
+  <section class="card" id="exampleCard" hidden>
+    <h2>Example check</h2>
+    <div id="example"></div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Reference: Z1–Z16 and the rules</summary>
+      <div style="margin-top:12px" class="zref" id="zref"></div>
+      <h3>Rules used</h3>
+      <ul class="note" style="padding-left:18px;margin:0">
+        <li><b>Step 1:</b> draw a number 1–26 and plot it as a line across columns 1–26. Repeat (up to max draws) until the same line appears twice in a row, then print the two lines. If that never happens, print NONE and stop everything.</li>
+        <li><b>Step 2:</b> pick 4 different patterns from Z1–Z16 at random as C1–C4, shown as C4 C3 C2 C1.</li>
+        <li><b>C5–C8:</b> read across rows. Row 1 of C1, C2, C3, C4 becomes C5; row 2 becomes C6; row 3 becomes C7; row 4 becomes C8 (this matches the example).</li>
+        <li><b>Addition</b> (row by row): Y+Y=Y, Y+X=X, X+X=Y.</li>
+        <li>C9=C1+C2, C10=C3+C4, C11=C5+C6, C12=C7+C8, C13=C9+C10, C14=C11+C12, C15=C13+C14, C16=C15+C1.</li>
+        <li>If C15 is Z1, Z7 or Z11, pick 4 new patterns and rebuild.</li>
+        <li>C17=C1+C4+C7+C8, C20=C3+C7+C11+C15. If C20 isn't Z1, Z3, Z5, Z6, Z8, Z10, Z13 or Z15, C20 = Nil.</li>
+        <li>If 8 or more of C1–C16 equal C17, print them in a table and stop. Otherwise print None and do the next run.</li>
+      </ul>
+    </details>
+  </section>
+</main>
+
+<script>
+/* ---------- core logic ---------- */
+const Z = {1:"XXXX",2:"YXYX",3:"XYXX",4:"YXXY",5:"YYYX",6:"YYXY",7:"YXXX",8:"YYXX",
+           9:"XXYY",10:"XXXY",11:"YXYY",12:"XYYY",13:"XYYX",14:"XXYX",15:"XYXY",16:"YYYY"};
+const zOf = p => { for (const k in Z) if (Z[k] === p) return "Z" + k; return "?"; };
+const add = (...ps) => ps.reduce((a, b) => [...a].map((c, i) => c === b[i] ? "Y" : "X").join(""));
+const RESELECT = [Z[1], Z[7], Z[11]];
+const C20_OK = [1,3,5,6,8,10,13,15].map(k => Z[k]);
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function hashSeed(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+
+function buildChart(m){            // m = [C1,C2,C3,C4] patterns
+  const C = {};
+  m.forEach((p, i) => C[i + 1] = p);
+  for (let r = 0; r < 4; r++) C[5 + r] = C[1][r] + C[2][r] + C[3][r] + C[4][r];
+  C[9]  = add(C[1], C[2]);   C[10] = add(C[3], C[4]);
+  C[11] = add(C[5], C[6]);   C[12] = add(C[7], C[8]);
+  C[13] = add(C[9], C[10]);  C[14] = add(C[11], C[12]);
+  C[15] = add(C[13], C[14]); C[16] = add(C[15], C[1]);
+  C[17] = add(C[1], C[4], C[7], C[8]);
+  C[20] = add(C[3], C[7], C[11], C[15]);
+  return C;
+}
+
+function pick4(rng){
+  const pool = Array.from({length:16}, (_, i) => i + 1);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool.slice(0, 4);
+}
+
+function runOnce(rng, maxDraws, stopOnNil){
+  const res = { draws: [] };
+  let prev = null;
+  for (let i = 0; i < maxDraws; i++) {
+    const n = 1 + Math.floor(rng() * 26);
+    res.draws.push(n);
+    if (n === prev) { res.repeatAt = i; break; }
+    prev = n;
+  }
+  if (res.repeatAt === undefined) { res.none = true; return res; }
+
+  res.selections = [];
+  let C, picks;
+  for (let a = 0; a < 1000; a++) {
+    picks = pick4(rng);
+    C = buildChart(picks.map(k => Z[k]));
+    res.selections.push({ picks, c15: C[15] });
+    if (!RESELECT.includes(C[15])) break;
+  }
+  res.picks = picks; res.C = C;
+  res.c20nil = !C20_OK.includes(C[20]);
+  res.matches = [];
+  for (let i = 1; i <= 16; i++) if (C[i] === C[17]) res.matches.push(i);
+  if (res.c20nil && stopOnNil) { res.stopped = true; return res; }
+  res.success = res.matches.length >= 8;
+  return res;
+}
+
+function simulate({maxRuns, maxDraws, seed, stopOnNil}){
+  const rng = seed === "" || seed == null ? Math.random : mulberry32(hashSeed(seed));
+  const runs = [];
+  let outcome = "exhausted";
+  for (let r = 0; r < maxRuns; r++) {
+    const res = runOnce(rng, maxDraws, stopOnNil);
+    res.n = r + 1;
+    runs.push(res);
+    if (res.none) { outcome = "none"; break; }
+    if (res.success) { outcome = "success"; break; }
+  }
+  return { runs, outcome };
+}
+
+/* ---------- UI ---------- */
+if (typeof document !== "undefined") {
+  const $ = id => document.getElementById(id);
+  let current = null;
+
+  const cells = p => [...p].map(c => `<span class="c ${c}">${c}</span>`).join("");
+  const fig = (label, p, cls = "") => `<div class="fig ${cls}"><div class="fl">${label}</div>${cells(p)}<div class="fz">${zOf(p)}</div></div>`;
+
+  // Z reference
+  $("zref").innerHTML = Object.keys(Z).map(k => fig("Z" + k, Z[k])).join("");
+
+  function chartHTML(C, highlight){
+    const f = (i, cls = "") => fig("C" + i, C[i], (highlight && C[i] === C[17] ? "match " : "") + cls);
+    return `
+    <div class="chart">
+      ${[8,7,6,5,4,3,2,1].map(i => `<div class="slot">${f(i, i<=4 ? "key" : "")}</div>`).join("")}
+      <div class="tier">C9–C12 (pairs added)</div>
+      <div class="slot span2">${f(12)}</div><div class="slot span2">${f(11)}</div>
+      <div class="slot span2">${f(10)}</div><div class="slot span2">${f(9)}</div>
+      <div class="tier">C13–C14</div>
+      <div class="slot span4">${f(14)}</div><div class="slot span4">${f(13)}</div>
+      <div class="tier">C15 = C13 + C14</div>
+      <div class="slot span8">${f(15)}</div>
+    </div>
+    <div class="derived">
+      <div class="d">${f(16)}<span class="f">C15 + C1</span></div>
+      <div class="d">${fig("C17", C[17], "key")}<span class="f">C1+C4+C7+C8</span></div>
+      <div class="d">${C20_OK.includes(C[20]) ? fig("C20", C[20]) : `<div class="nil">C20<br>Nil</div>`}<span class="f">C3+C7+C11+C15</span></div>
+    </div>`;
+  }
+
+  function plotHTML(draws, repeatAt){
+    const start = repeatAt - 1;
+    let h = `<div class="plot"><div class="h">#</div>`;
+    for (let c = 1; c <= 26; c++) h += `<div class="h">${c}</div>`;
+    draws.forEach((n, i) => {
+      const rep = i === start || i === repeatAt;
+      h += `<div class="row${rep ? " rep" : ""}"><div class="rl">${i + 1}</div>`;
+      for (let c = 1; c <= 26; c++) h += `<div class="cell${c === n ? " on" : ""}"></div>`;
+      h += `</div>`;
+    });
+    return h + `</div>`;
+  }
+
+  const lineText = (n, idx) => `Line ${String(idx).padStart(5)} │ ` +
+    Array.from({length:26}, (_, c) => c + 1 === n ? "●" : "·").join(" ") + ` │ ${n}`;
+
+  function renderDetail(run){
+    $("detailCard").hidden = false;
+    $("detailTitle").textContent = `Run ${run.n} detail`;
+    let h = `<h3>Step 1 · Draws</h3>`;
+    if (run.none) {
+      h += `<p>${run.draws.length.toLocaleString()} draws with no repeated line.</p>
+            <div class="banner bad">NONE — STOP</div>`;
+      $("detail").innerHTML = h; return;
+    }
+    const n = run.draws[run.repeatAt];
+    h += `<p>Line repeated after <b>${run.draws.length}</b> draws: number <b>${n}</b> came up on draws ${run.repeatAt} and ${run.repeatAt + 1}.</p>
+          <div class="plotwrap">${plotHTML(run.draws, run.repeatAt)}</div>
+          <div class="legend"><span><i style="background:var(--x)"></i>drawn number</span><span><i style="background:var(--bad)"></i>repeated lines</span></div>
+          <pre class="lines mono">${lineText(n, run.repeatAt)}\n${lineText(n, run.repeatAt + 1)}</pre>`;
+
+    h += `<h3>Step 2 · Selection</h3>`;
+    if (run.selections.length > 1) {
+      h += `<p class="note">${run.selections.slice(0, -1).map((s, i) =>
+        `Pick ${i + 1}: ${s.picks.map(k => "Z" + k).join(", ")} → C15 = ${zOf(s.c15)} → picked again`).join("<br>")}</p>`;
+    }
+    h += `<p>C1 = Z${run.picks[0]}, C2 = Z${run.picks[1]}, C3 = Z${run.picks[2]}, C4 = Z${run.picks[3]}</p>`;
+    h += chartHTML(run.C, true);
+
+    h += `<h3>C20</h3>`;
+    h += run.c20nil
+      ? `<p>C20 = ${run.C[20]} (${zOf(run.C[20])}) is not in the allowed list → <b>C20 = Nil</b>.${run.stopped ? " This run ended here." : ""}</p>`
+      : `<p>C20 = <span class="mono">${run.C[20]}</span> = <b>${zOf(run.C[20])}</b></p>`;
+
+    if (!run.stopped) {
+      h += `<h3>C17 match test</h3>
+            <p>C17 = <span class="mono">${run.C[17]}</span> (${zOf(run.C[17])}) equals <b>${run.matches.length}</b> of C1–C16.</p>`;
+      if (run.success) {
+        h += `<div class="tablewrap" style="max-height:none"><table><thead><tr><th>Column</th><th>Row 1</th><th>Row 2</th><th>Row 3</th><th>Row 4</th><th>Pattern</th></tr></thead><tbody>
+          ${run.matches.map(i => `<tr><td><b>C${i}</b></td>${[...run.C[i]].map(c => `<td><span class="c ${c}">${c}</span></td>`).join("")}<td>${zOf(run.C[i])}</td></tr>`).join("")}
+          </tbody></table></div>`;
+      } else {
+        h += `<div class="banner neutral">None</div>`;
+      }
+    }
+    $("detail").innerHTML = h;
+  }
+
+  function render(result){
+    current = result;
+    $("summaryCard").hidden = false;
+    const { runs, outcome } = result;
+    const last = runs[runs.length - 1];
+    const b = $("banner");
+    if (outcome === "success") { b.className = "banner ok"; b.textContent = `Condition met on run ${last.n}: ${last.matches.length} of C1–C16 equal C17. END.`; }
+    else if (outcome === "none") { b.className = "banner bad"; b.textContent = `Run ${last.n}: no repeated line → NONE. STOP.`; }
+    else { b.className = "banner neutral"; b.textContent = `All ${runs.length} runs done. No run had 8+ columns equal to C17. END.`; }
+
+    const ran = runs.filter(r => !r.none);
+    const nil = ran.filter(r => r.c20nil).length;
+    const best = Math.max(0, ...ran.map(r => r.matches.length));
+    const avgDraws = (runs.reduce((s, r) => s + r.draws.length, 0) / runs.length).toFixed(1);
+    $("stats").innerHTML = [
+      ["Runs", runs.length], ["Avg draws to repeat", avgDraws],
+      ["C20 = Nil", nil], ["C20 printed", ran.length - nil], ["Most matches with C17", best]
+    ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");
+
+    $("runRows").innerHTML = runs.map((r, i) => {
+      if (r.none) return `<tr data-i="${i}"><td>${r.n}</td><td>${r.draws.length}</td><td colspan="10">—</td><td><span class="pill bad">NONE</span></td></tr>`;
+      const out = r.success ? `<span class="pill ok">Met</span>` : r.stopped ? `<span class="pill mut">C20 Nil</span>` : `<span class="pill mut">None</span>`;
+      return `<tr data-i="${i}"><td>${r.n}</td><td>${r.draws.length}</td><td>${r.draws[r.repeatAt]}</td>
+        ${r.picks.map(k => `<td>Z${k}</td>`).join("")}<td>${r.selections.length - 1}</td>
+        <td>${zOf(r.C[15])}</td><td>${zOf(r.C[17])}</td><td>${r.c20nil ? "Nil" : zOf(r.C[20])}</td>
+        <td>${r.matches.length}</td><td>${out}</td></tr>`;
+    }).join("");
+    selectRow(runs.length - 1);
+  }
+
+  function selectRow(i){
+    document.querySelectorAll("#runRows tr").forEach(tr => tr.classList.toggle("sel", +tr.dataset.i === i));
+    renderDetail(current.runs[i]);
+  }
+
+  $("runRows").addEventListener("click", e => {
+    const tr = e.target.closest("tr"); if (tr) { selectRow(+tr.dataset.i); $("detailCard").scrollIntoView({behavior:"smooth"}); }
+  });
+
+  $("runBtn").addEventListener("click", () => {
+    const maxRuns = Math.max(1, +$("maxRuns").value || 100);
+    const maxDraws = Math.max(2, +$("maxDraws").value || 10000);
+    render(simulate({ maxRuns, maxDraws, seed: $("seed").value.trim(), stopOnNil: $("stopNil").checked }));
+  });
+
+  $("exBtn").addEventListener("click", () => {
+    const given = { 5:"YYYX",6:"XXYY",7:"YXXX",8:"XYXY",9:"YYXX",10:"XYYX",11:"XXYX",12:"XXYX",13:"XXXY",14:"YYYY",15:"XXXX",16:"XYXY" };
+    const C = buildChart(["YXYX","YXXY","YYXX","XYXY"]);
+    let rows = "";
+    for (let i = 5; i <= 16; i++) {
+      const same = C[i] === given[i];
+      rows += `<tr><td><b>C${i}</b></td><td class="mono">${given[i]}</td><td class="mono">${C[i]}</td><td>${same ? `<span class="pill ok">same</span>` : `<span class="pill bad">differs</span>`}</td></tr>`;
+    }
+    $("exampleCard").hidden = false;
+    $("example").innerHTML = `
+      <p class="note">This uses the example's C1–C4 (Z2, Z4, Z8, Z15) and applies the rules exactly as written.</p>
+      ${chartHTML(C, false)}
+      <h3>Rules vs. the example's numbers</h3>
+      <div class="tablewrap" style="max-height:none"><table><thead><tr><th>Column</th><th>Example shows</th><th>Rules give</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="note" style="margin-top:10px">C5–C12 and C14 match. The example's C13 doesn't follow its own rule: C9 (YYXX) + C10 (XYYX) gives XYXY, not XXXY. C15 and C16 then differ too, because they're built on C13. The simulator follows the written rules.</p>`;
+    $("exampleCard").scrollIntoView({behavior:"smooth"});
+  });
+
+  $("runBtn").click();
+}
+if (typeof module !== "undefined") module.exports = { Z, add, buildChart, simulate, zOf };
+</script>
+</body>
+</html>
